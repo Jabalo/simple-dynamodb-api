@@ -1,0 +1,72 @@
+service: test-dynamodb
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-1
+  environment:
+    TABLE_NAME: RulesTable
+    REGION: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - arn:aws:dynamodb:us-east-1:597424680248:table/RulesTable/*
+        - arn:aws:dynamodb:us-east-1:597424680248:table/RulesTable
+
+functions: 
+  addRule:
+    handler: handler.addRule
+    events:
+      - http:
+          method: POST
+          path: /rule
+          private: false
+  getRule:
+    handler: handler.getRule
+    events:
+      - http: 
+          method: GET
+          path: /rule/{ruleType}/{typeId}
+          private: false
+resources:
+  Resources:
+    RulesTable: 
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: RulesTable
+        AttributeDefinitions:
+          - AttributeName: ruleName
+            AttributeType: S
+          - AttributeName: ruleType
+            AttributeType: S
+          - AttributeName: typeId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ruleName
+            KeyType: HASH
+          - AttributeName: ruleType
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: typeId
+            KeySchema:
+              - AttributeName: typeId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+package:
+  exclude:
+    - '!node_modules/aws/**'
